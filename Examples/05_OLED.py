@@ -36,7 +36,8 @@ def draw_text_with_wrap(draw, text, x, y, font, fill, max_width):
 
     for line in lines:
         draw.text((x, y), line, font=font, fill=fill)
-        y += font.getsize(line)[1]
+        _, _, _, line_height = font.getbbox(line)
+        y += line_height
 
 try:
     while True:
