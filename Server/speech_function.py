@@ -12,7 +12,13 @@ import time
 import subprocess
 import threading
 import numpy as np
-import sherpa_onnx
+
+try:
+    import sherpa_onnx
+    HAS_SHERPA = True
+except ImportError:
+    HAS_SHERPA = False
+    print("Speech function is disabled, Please install sherpa-onnx by 'sudo pip3 install sherpa-onnx sherpa-onnx-bin --break-system-packages'")
 
 username = os.popen("echo ${SUDO_USER:-$(who -m | awk '{ print $1 }')}").readline().strip() # pi
 user_home = os.popen(f'getent passwd {username} | cut -d: -f 6').readline().strip()        # home
@@ -52,20 +58,21 @@ class Speech(threading.Thread):
         self.SpeechMode = 'none'
         self.command = ''
         self.control_callback = control_callback
-        self.recognizer = sherpa_onnx.OnlineRecognizer.from_transducer(
-            tokens=f"{user_home}/sherpa-onnx/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/tokens.txt",
-            encoder=f"{user_home}/sherpa-onnx/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/encoder-epoch-99-avg-1.onnx",
-            decoder=f"{user_home}/sherpa-onnx/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/decoder-epoch-99-avg-1.onnx",
-            joiner=f"{user_home}/sherpa-onnx/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/joiner-epoch-99-avg-1.onnx",
-            num_threads=1,
-            sample_rate=16000,
-            feature_dim=80,
-            enable_endpoint_detection=True,
-            rule1_min_trailing_silence=2.4,
-            rule2_min_trailing_silence=1.2,
-            rule3_min_utterance_length=300,  # it essentially disables this rule
-            provider="cpu"
-        )
+        if HAS_SHERPA:
+            self.recognizer = sherpa_onnx.OnlineRecognizer.from_transducer(
+                tokens=f"{user_home}/sherpa-onnx/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/tokens.txt",
+                encoder=f"{user_home}/sherpa-onnx/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/encoder-epoch-99-avg-1.onnx",
+                decoder=f"{user_home}/sherpa-onnx/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/decoder-epoch-99-avg-1.onnx",
+                joiner=f"{user_home}/sherpa-onnx/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/joiner-epoch-99-avg-1.onnx",
+                num_threads=1,
+                sample_rate=16000,
+                feature_dim=80,
+                enable_endpoint_detection=True,
+                rule1_min_trailing_silence=2.4,
+                rule2_min_trailing_silence=1.2,
+                rule3_min_utterance_length=300,  # it essentially disables this rule
+                provider="cpu"
+            )
         self.cmd = [
             "arecord",
             "-D", "plughw:2,0",   # device card 2, subdevice 0, command: arecord -l
@@ -108,6 +115,8 @@ class Speech(threading.Thread):
             time.sleep(0.1)
 
     def SpeechProcessing(self):
+        if not HAS_SHERPA:
+            return
         # The model is using 16 kHz, we use 48 kHz here to demonstrate that
         # sherpa-onnx will do resampling inside.
         sample_rate = 16000
