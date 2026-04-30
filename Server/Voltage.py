@@ -29,7 +29,7 @@ average_voltage = 0.0
 full_voltage = 8.4
 WarningThreshold = 6.3
 # read the ADC value of channel 0
-ADCVref = 4.93
+ADCVref = 5.2
 channel = 0
 R15 = 3000
 R17 = 1000
